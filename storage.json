@@ -1,14 +1,14 @@
 [
     {
-        "author": "writer2",
-        "title": "captivating",
-        "isCheckedOut": false,
-        "checkedOutTo": ""
-    },
-    {
         "author": "writer",
         "title": "Eye-cathing",
         "isCheckedOut": true,
         "checkedOutTo": "is mine now"
+    },
+    {
+        "author": "writer2",
+        "title": "captivating",
+        "isCheckedOut": false,
+        "checkedOutTo": ""
     }
 ]
