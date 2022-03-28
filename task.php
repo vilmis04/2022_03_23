@@ -2,83 +2,87 @@
 
 declare(strict_types=1);
 
+class Storage {
+    private static $storageFile = './storage.json';
+
+    public static function getFromStorage(): array {
+
+        if (file_exists(self::$storageFile)) {
+            $memory = json_decode(file_get_contents(self::$storageFile), true);
+        } else {
+            $memory = [];
+            self::updateStorage($memory);
+        }
+        return $memory;
+    }
+    public static function updateStorage(array $data): void
+    {
+        file_put_contents(self::$storageFile, json_encode($data, JSON_PRETTY_PRINT));
+    }
+}
+
 class Library
 {
-
-    public array $books;
-
-    public function __construct()
-    {
-        $storageFile = './storage.json';
-        if (file_exists($storageFile)) {
-            $this->books = json_decode(file_get_contents($storageFile), true);
-        } else {
-            $this->books = [];
-            $this->updateStorage();
-        }
-    }
-
     public function addBook(string $author, string $title): void
     {
-        $this->books[] = [
+        $books = Storage::getFromStorage();
+        $books[] = [
             'author' => $author,
             'title' => $title,
             'isCheckedOut' => false,
             'checkedOutTo' => ''
         ];
-
-        $this->updateStorage();
+        Storage::updateStorage($books);
     }
 
     public function removeBook(string $author, string $title): void
     {
-        $remove = function (int $key) {
-            array_splice($this->books, $key, 1);
+
+        $books = Storage::getFromStorage();
+        $remove = function (int $key, array $books): array {
+            array_splice($books, $key, 1);
+            return $books;
         };
-        $this->changeBookStatus($author, $title, $remove);
+        $this->changeBookStatus($author, $title, $books, $remove);
     }
 
     public function checkOutBook(string $author, string $title, string $user): void
     {
-        $checkOut = function (int $key, array $book, string $user): void {
+        $books = Storage::getFromStorage();
+        $checkOut = function (int $key, array $books, array $book, string $user): array {
             $book['isCheckedOut'] = true;
             $book['checkedOutTo'] = $user;
-            $this->books[$key] = $book;
+            $books[$key] = $book;
+            return $books;
         };
-        $this->changeBookStatus($author, $title, $checkOut, $user);
+        $this->changeBookStatus($author, $title, $books, $checkOut, $user);
     }
 
-    private function changeBookStatus(string $author, string $title, callable $callback, $user = NULL)
+    private function changeBookStatus(string $author, string $title, array $books, callable $callback, $user = NULL)
     {
         $bookFound = false;
-        foreach ($this->books as $key => $book) {
+        foreach ($books as $key => $book) {
             if ($book['author'] === $author && $book['title'] === $title) {
                 $bookFound = true;
                 if ($book['isCheckedOut']) {
-                    echo "Book is already checked out!";
+                    echo "Book is checked out!";
                 } else {
-                    $callback($key, $book = $book, $user);
+                    Storage::updateStorage($callback($key, $books, $book, $user));
                 }
             }
         }
-        $this->updateStorage();
         if (!$bookFound) {
             echo 'Book not found!';
         }
     }
 
-    private function updateStorage(): void
-    {
-        $storageFile = './storage.json';
-        file_put_contents($storageFile, json_encode($this->books, JSON_PRETTY_PRINT));
-    }
-
     public function findBooks(string $term, string $method): void
     {
+        $books = Storage::getFromStorage();
         $regex = '/' . trim($term) . '/i';
         $bookFound = false;
 
-        foreach ($this->books as $key => $book) {
+        foreach ($books as $key => $book) {
             if (preg_match($regex, $book[$method]) === 1) {
                 $bookFound = true;
                 $this->printResult($book);
