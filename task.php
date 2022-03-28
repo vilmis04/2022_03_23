@@ -58,18 +58,16 @@ class Library
     public function removeBook(string $author, string $title): void
     {
 
-        $books = Storage::getFromStorage();
         $remove = function (int $key, array $books): array
         {
             array_splice($books, $key, 1);
             return $books;
         };
-        $this->changeBookStatus($author, $title, $books, $remove);
+        $this->changeBookStatus($author, $title, $remove);
     }
 
     public function checkOutBook(string $author, string $title, string $user): void
     {
-        $books = Storage::getFromStorage();
         $checkOut = function (int $key, array $books, Book $book, string $user): array
         {
             $book->isCheckedOut = true;
@@ -78,11 +76,12 @@ class Library
 
             return $books;
         };
-        $this->changeBookStatus($author, $title, $books, $checkOut, $user);
+        $this->changeBookStatus($author, $title, $checkOut, $user);
     }
 
-    private function changeBookStatus(string $author, string $title, array $books, callable $callback, $user = NULL)
+    private function changeBookStatus(string $author, string $title, callable $callback, $user = NULL)
     {
+        $books = Storage::getFromStorage();
         $bookFound = false;
         foreach ($books as $key => $book) {
             if ($book->author === $author && $book->title === $title) {
