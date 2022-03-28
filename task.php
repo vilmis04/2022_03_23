@@ -2,22 +2,47 @@
 
 declare(strict_types=1);
 
+class Book {
+    public string $author;
+    public string $title;
+    public bool $isCheckedOut;
+    public string $chekedOutTo;
+
+    public function __construct(string $author, string $title)
+    {
+        $this->author = $author;
+        $this->title = $title;
+        $this->isCheckedOut = false;
+        $this->checkedOutTo = '';
+    }
+}
+
 class Storage {
     private static $storageFile = './storage.json';
 
-    public static function getFromStorage(): array {
-
+    public static function getFromStorage(): array
+    {
         if (file_exists(self::$storageFile)) {
-            $memory = json_decode(file_get_contents(self::$storageFile), true);
+            $contents = json_decode(file_get_contents(self::$storageFile), true);
+            $memory = [];
+            foreach($contents as $object) {
+                $memory[] = unserialize($object);
+            }
+
         } else {
             $memory = [];
             self::updateStorage($memory);
         }
         return $memory;
     }
+
     public static function updateStorage(array $data): void
     {
-        file_put_contents(self::$storageFile, json_encode($data, JSON_PRETTY_PRINT));
+        $memory = [];
+        foreach($data as $object) {
+            $memory[] = serialize($object);
+        }
+        file_put_contents(self::$storageFile, json_encode($memory, JSON_PRETTY_PRINT));
     }
 }
 
@@ -26,12 +51,7 @@ class Library
     public function addBook(string $author, string $title): void
     {
         $books = Storage::getFromStorage();
-        $books[] = [
-            'author' => $author,
-            'title' => $title,
-            'isCheckedOut' => false,
-            'checkedOutTo' => ''
-        ];
+        $books[] = new Book($author, $title);
         Storage::updateStorage($books);
     }
 
@@ -39,7 +59,8 @@ class Library
     {
 
         $books = Storage::getFromStorage();
-        $remove = function (int $key, array $books): array {
+        $remove = function (int $key, array $books): array
+        {
             array_splice($books, $key, 1);
             return $books;
         };
@@ -49,10 +70,12 @@ class Library
     public function checkOutBook(string $author, string $title, string $user): void
     {
         $books = Storage::getFromStorage();
-        $checkOut = function (int $key, array $books, array $book, string $user): array {
-            $book['isCheckedOut'] = true;
-            $book['checkedOutTo'] = $user;
+        $checkOut = function (int $key, array $books, Book $book, string $user): array
+        {
+            $book->isCheckedOut = true;
+            $book->checkedOutTo = $user;
             $books[$key] = $book;
+
             return $books;
         };
         $this->changeBookStatus($author, $title, $books, $checkOut, $user);
@@ -62,9 +85,9 @@ class Library
     {
         $bookFound = false;
         foreach ($books as $key => $book) {
-            if ($book['author'] === $author && $book['title'] === $title) {
+            if ($book->author === $author && $book->title === $title) {
                 $bookFound = true;
-                if ($book['isCheckedOut']) {
+                if ($book->isCheckedOut) {
                     echo "Book is checked out!";
                 } else {
                     Storage::updateStorage($callback($key, $books, $book, $user));
@@ -82,26 +105,26 @@ class Library
         $regex = '/' . trim($term) . '/i';
         $bookFound = false;
 
-        foreach ($books as $key => $book) {
-            if (preg_match($regex, $book[$method]) === 1) {
+        foreach ($books as $book) {
+            $searchMethod = $method === 'author' ? $book->author : $book->title;
+            if (preg_match($regex, $searchMethod) === 1) {
                 $bookFound = true;
                 $this->printResult($book);
             }
         }
-
         if (!$bookFound) {
             echo 'No books found!';
         }
     }
 
-    private function printResult(array $book)
+    private function printResult(Book $book)
     {
         echo PHP_EOL . '---------' . PHP_EOL;
-        echo 'Author: ' . $book['author'] . PHP_EOL;
-        echo 'Title: ' . $book['title'] . PHP_EOL;
-        echo 'Checked out?: ' . ($book['isCheckedOut'] ? 'Yes' : 'No') . PHP_EOL;
-        if ($book['isCheckedOut']) {
-            echo 'Checked out to: ' . $book['checkedOutTo'] . PHP_EOL;
+        echo 'Author: ' . $book->author . PHP_EOL;
+        echo 'Title: ' . $book->title . PHP_EOL;
+        echo 'Checked out?: ' . ($book->isCheckedOut ? 'Yes' : 'No') . PHP_EOL;
+        if ($book->isCheckedOut) {
+            echo 'Checked out to: ' . $book->checkedOutTo . PHP_EOL;
         }
     }
 }
