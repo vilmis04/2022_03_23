@@ -88,14 +88,14 @@ class Library
             if ($book->author === $author && $book->title === $title) {
                 $bookFound = true;
                 if ($book->isCheckedOut) {
-                    echo "Book is checked out!";
+                    LibraryReporter::printError('409');
                 } else {
                     Storage::updateStorage($callback($key, $books, $book, $user));
                 }
             }
         }
         if (!$bookFound) {
-            echo 'Book not found!';
+            LibraryReporter::printError('404');
         }
     }
 
@@ -109,15 +109,19 @@ class Library
             $searchMethod = $method === 'author' ? $book->author : $book->title;
             if (preg_match($regex, $searchMethod) === 1) {
                 $bookFound = true;
-                $this->printResult($book);
+                LibraryReporter::printSearchResult($book);
             }
         }
         if (!$bookFound) {
-            echo 'No books found!';
+            LibraryReporter::printError('404');
         }
     }
+}
 
-    private function printResult(Book $book)
+
+class LibraryReporter {
+
+    public static function printSearchResult(Book $book)
     {
         echo PHP_EOL . '---------' . PHP_EOL;
         echo 'Author: ' . $book->author . PHP_EOL;
@@ -127,8 +131,19 @@ class Library
             echo 'Checked out to: ' . $book->checkedOutTo . PHP_EOL;
         }
     }
-}
 
+    public static function printError(string $errorCode)
+    {
+        switch ($errorCode) {
+            case '404':
+                echo 'No book found!';
+                break;
+            case '409':
+                echo 'Book is checked out!';
+                break;
+        }
+    }
+}
 
 
 $inventory = new Library();
